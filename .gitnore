@@ -1,0 +1,16 @@
+# 数据集
+datasets/*.csv
+
+# 模型文件（太大）
+models/*.pkl
+models/*.pth
+
+# 系统文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+
+# 日志
+*.log
