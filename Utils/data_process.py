@@ -37,11 +37,41 @@ def load_kdd_data():
 
     return train_data, test_data
 
-# 2：生成二分类标签（正常/异常）
-def preprocess_binary_label(df):
-    """normal = 0, anomaly = 1"""
+
+# 2. 两层标签
+def make_labels(df):
+    # 1.二分类
     df["target"] = df["label"].apply(lambda x: 0 if x == "normal" else 1)
+
+    # ===================== 【正确】KDD 攻击类型自动归类 =====================
+    def map_attack(attack_name):
+        # 1. DoS 暴力拒绝服务
+        dos = ['back', 'land', 'neptune', 'pod', 'smurf', 'teardrop', 'apache2', 'mailbomb', 'processtable', 'udpstorm']
+        # 2. Probe 扫描探测
+        probe = ['satan', 'ipsweep', 'nmap', 'portsweep', 'mscan', 'saint']
+        # 3. U2R 普通用户提权
+        u2r = ['buffer_overflow', 'loadmodule', 'rootkit', 'perl', 'sqlattack', 'xterm', 'ps']
+        # 4. R2L 远程未授权访问
+        r2l = ['ftp_write', 'guess_passwd', 'imap', 'phf', 'spy', 'warezclient', 'warezmaster', 'xlock', 'xsnoop',
+               'snmpguess', 'snmpgetattack', 'httptunnel', 'sendmail', 'named']
+
+        if attack_name == 'normal':
+            return 0
+        elif attack_name in dos:
+            return 1
+        elif attack_name in probe:
+            return 2
+        elif attack_name in u2r:
+            return 3
+        elif attack_name in r2l:
+            return 4
+        else:
+            return 0  # 未知攻击 → 归为正常（不会出NaN）
+
+    df["multi_target"] = df["label"].apply(map_attack)
+
     return df
+
 
 # 3. 异常值处理(分位数缩尾法: 平衡极端值带来的干扰，又保留了attack特征)
 def handle_anomalies(train_data, test_data, numerical_features, config):
@@ -68,15 +98,28 @@ def preprocess_features(train_df, test_df, config, save_path = "./models"):
     category_feature: Label_Encoder编码
     数值特征 StandardScaler标准化
     """
-    drop_feat = ["target", "difficulty_score","label"]
+    train_df = make_labels(train_df)
+    test_df = make_labels(test_df)
+
+    drop_feat = ["target", "difficulty_score","label","multi_target"]
     X_train = train_df.drop(columns=drop_feat, axis=1)
     X_test = test_df.drop(columns=drop_feat, axis=1)
     y_train = train_df["target"]
     y_test = test_df["target"]
+    y_train_m = train_df["multi_target"]
+    y_test_m = test_df["multi_target"]
 
-    # 分类特征编码
-    encoder = OrdinalEncoder()
-    X_train[CAT_Features] = encoder.fit_transform(X_train[CAT_Features])
+    encoder_path = "./models/OrdinalEncoder.pkl"
+    if os.path.exists(encoder_path):
+        # 已存在 → 直接加载
+        encoder = joblib.load(encoder_path)
+    else:
+        # 不存在 → 用全量训练集训练一次（保证见过所有类别）
+        encoder = OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
+        encoder.fit(train_df[CAT_Features])
+        joblib.dump(encoder, encoder_path)
+
+    X_train[CAT_Features] = encoder.transform(X_train[CAT_Features])
     X_test[CAT_Features] = encoder.transform(X_test[CAT_Features])
 
     # 异常值处理
@@ -93,7 +136,7 @@ def preprocess_features(train_df, test_df, config, save_path = "./models"):
     joblib.dump(scaler, os.path.join(save_path, "scaler.pkl"))
     print("✅ 特征预处理完成")
 
-    return X_train, y_train, X_test, y_test
+    return X_train, y_train, X_test, y_test, y_train_m, y_test_m
 
 
 

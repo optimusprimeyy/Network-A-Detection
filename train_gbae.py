@@ -14,8 +14,13 @@ def main():
     train_df = preprocess_binary_label(train_df)
     test_df = preprocess_binary_label(test_df)
 
+    # 因为是无监督模型，所以得用正常数据来训练
+    train_normal = train_df[train_df["target"] == 0]
+
     config = load_config()
-    X_train, y_train, X_test, y_test = preprocess_features(train_df, test_df, config)
+    print("normal", len(train_normal))
+    X_train, y_train, X_test, y_test, y_train_m, y_test_m = preprocess_features(train_normal, test_df, config)
+
     print('type', type(X_test), type(X_train))
     score_r, score_l, model_state_dict = GB_AE(X_train.to_numpy(), X_test.to_numpy())
 

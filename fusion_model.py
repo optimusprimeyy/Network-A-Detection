@@ -32,7 +32,7 @@ def load_gbae(model_path = 'models\\GBAE_trained.pkl'):
 
 # 加载 LightGBM
 def load_lgb():
-    with open('models\\lightgbm_trained.pkl', 'rb') as f:
+    with open('models\\lightgbm_binary_model.pkl', 'rb') as f:
         model = pickle.load(f)
 
     return model
@@ -85,20 +85,20 @@ if __name__ == '__main__':
     # ===================== 【问题3测试：评估结果】 =====================
     from sklearn.metrics import roc_auc_score, accuracy_score
 
-    print("\n" + "=" * 50)
-    print("测试结果：已知攻击 + 未知攻击兼顾")
-    print("=" * 50)
+    log.info("\n" + "=" * 50)
+    log.info("测试结果：已知攻击 + 未知攻击兼顾")
+    log.info("=" * 50)
 
     # 1. 单模型 GBAE
     auc_gbae = roc_auc_score(y_test, gbae_scores)
-    print(f"GBAE(无监督-未知攻击) AUC = {auc_gbae:.4f}")
+    log.info(f"GBAE(无监督-未知攻击) AUC = {auc_gbae:.4f}")
 
-    # 2. 单模型 LightGBM
+    # 2. 二分类模型 LightGBM
     auc_lgb = roc_auc_score(y_test, lgb_scores)
-    print(f"LightGBM(监督-已知攻击) AUC = {auc_lgb:.4f}")
+    log.info(f"LightGBM(监督-已知攻击) AUC = {auc_lgb:.4f}")
 
     # 3. 融合模型（最终解决问题3）
     final_auc = roc_auc_score(y_test, final_scores)
-    print(f"融合模型 AUC = {final_auc:.4f}")
+    log.info(f"融合模型 AUC = {final_auc:.4f}")
 
-    print("\n✅ 结论：融合模型AUC最高 → 已知、未知攻击都搞定！")
+    log.info("\n✅ 结论：融合模型AUC最高 → 已知、未知攻击都搞定！")
