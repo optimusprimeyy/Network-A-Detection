@@ -5,7 +5,7 @@ import pickle
 import torch
 import lightgbm as lgb
 from UAD.GBAE import CenterOnlyAE
-from Utils.data_process import load_kdd_data, preprocess_binary_label, load_config, preprocess_features
+from Utils.data_process import load_kdd_data, load_config, preprocess_features
 import logging
 logging.basicConfig(
     level=logging.INFO,
@@ -54,12 +54,18 @@ def lgb_predict(model, X):
 
     return pred
 
-def fusion_scores(lgb_pred, gbae_scores, weight = 0.6):
+def fusion_scores(lgb_pred, gbae_scores):
+    # GBAE 分数归一化
     gbae_norm = (gbae_scores - np.min(gbae_scores)) / (np.max(gbae_scores) - np.min(gbae_scores) + 1e-10)
 
-    final_score = weight * lgb_pred + (1 - weight) * gbae_norm
+    # 核心：自适应置信融合
+    final_score = lgb_pred.copy()
+    # LightGBM 不可信区间 [0.4, 0.6] → 替换成 GBAE
+    uncertain = (lgb_pred >= 0.4) & (lgb_pred <= 0.6)
+    final_score[uncertain] = gbae_norm[uncertain]
 
-    final_label = np.where(gbae_norm > 0.5, 1, 0)
+    # 最终标签
+    final_label = (final_score > 0.5).astype(int)
 
     return final_score, final_label
 
@@ -69,13 +75,11 @@ if __name__ == '__main__':
     gbae_model = load_gbae()
     lgb_model = load_lgb()
     train_df, test_df = load_kdd_data()
-    train_df = preprocess_binary_label(train_df)
-    test_df = preprocess_binary_label(test_df)
 
     X_test = test_df.drop('label', axis=1).to_numpy()
     y_test = test_df["label"].to_numpy()
 
-    X_train, y_train, X_test, y_test = preprocess_features(train_df, test_df, config)
+    X_train, y_train, X_test, y_test, _, _ = preprocess_features(train_df, test_df, config)
 
     gbae_scores = gbae_predict(gbae_model, X_test.to_numpy())
     lgb_scores = lgb_predict(lgb_model, X_test.to_numpy())
