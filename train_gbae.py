@@ -11,8 +11,6 @@ from Utils.data_process import *
 # ====================== 调用GBAE核心函数 + 保存模型 ======================
 def main():
     train_df, test_df = load_kdd_data()
-    train_df = preprocess_binary_label(train_df)
-    test_df = preprocess_binary_label(test_df)
 
     # 因为是无监督模型，所以得用正常数据来训练
     train_normal = train_df[train_df["target"] == 0]

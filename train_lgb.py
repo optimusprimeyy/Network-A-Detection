@@ -78,7 +78,7 @@ log.info(classification_report(y_test, y_pred_binary, target_names=["negative", 
 
 # 多分类模型
 multi_params = params.copy()
-
+# 重新设置为多分类目标！
 multi_params["objective"] = "multiclass"
 multi_params["num_class"] = 5
 multi_params["metric"] = "multi_logloss"
@@ -98,13 +98,13 @@ joblib.dump(multi_model, "./models/lightgbm_multi_model.pkl")
 y_pred_multi = multi_model.predict(X_test)
 y_pred_multi = np.argmax(y_pred_multi, axis=1)
 
-# 🔥 清洗：把 NaN 标签去掉
+# 清洗：把 NaN 标签去掉
 mask = ~np.isnan(y_test_m)
 X_test_clean = X_test[mask]
 y_test_m_clean = y_test_m[mask]
 y_pred_multi_clean = y_pred_multi[mask]
-print("===多分类结果===")
-print(classification_report(y_test_m_clean, y_pred_multi_clean, target_names=["normal","dos","probe","u2r","r2l"]))
+log.info("===多分类结果===")
+log.info(classification_report(y_test_m_clean, y_pred_multi_clean, target_names=["normal","dos","probe","u2r","r2l"]))
 
 
 

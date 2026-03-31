@@ -122,9 +122,10 @@ def preprocess_features(train_df, test_df, config, save_path = "./models"):
     X_train[CAT_Features] = encoder.transform(X_train[CAT_Features])
     X_test[CAT_Features] = encoder.transform(X_test[CAT_Features])
 
-    # 异常值处理
     NUM_features = [feat for feat in X_train.columns if feat not in CAT_Features]
-    X_train, X_test = handle_anomalies(X_train, X_test, NUM_features, config)
+
+    # 异常值处理,去掉了
+    # X_train, X_test = handle_anomalies(X_train, X_test, NUM_features, config)
 
     # 数值特征标准化
     scaler = StandardScaler()
